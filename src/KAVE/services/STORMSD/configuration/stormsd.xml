@@ -85,10 +85,14 @@ in the ambari configuration web interface.
         <value>/var/log/supervisord.log</value>
         <description>Main log file</description>
     </property>
-
+    <property>
+        <name>storm.local.dir</name>
+        <value>storm-local</value>
+        <description>Storm local directory.</description>
+    </property>
     <property>
         <name>stormsd.yaml.config</name>
-        <description>yaml config file for Storm 1.0.2</description>
+        <description>yaml config file for Storm 1.1.0</description>
         <value>#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file

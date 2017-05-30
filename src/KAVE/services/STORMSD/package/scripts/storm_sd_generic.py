@@ -44,12 +44,12 @@ class StormGeneric(Script):
         storm_dir_present = os.path.isdir('/usr/local/storm')
         if not storm_dir_present:
             # download storm
-            kc.copy_cache_or_repo('apache-storm-1.0.2.tar.gz', arch='noarch')
-            # Execute('wget http://www.us.apache.org/dist/storm/apache-storm-1.0.2/apache-storm-1.0.2.tar.gz')
-            Execute('tar -xvf apache-storm-1.0.2.tar.gz -C /usr/local')
-            Execute('mv /usr/local/apache-storm-1.0.2* /usr/local/storm-1.0.2')
-            Execute('chown -R storm:storm /usr/local/storm-1.0.2')
-            Execute('ln -s /usr/local/storm-1.0.2 /usr/local/storm')
+            # kc.copy_cache_or_repo('apache-storm-1.1.0.tar.gz', arch='noarch')
+            Execute('wget http://www.us.apache.org/dist/storm/apache-storm-1.1.0/apache-storm-1.1.0.tar.gz')
+            Execute('tar -xvf apache-storm-1.1.0.tar.gz -C /usr/local')
+            Execute('mv /usr/local/apache-storm-1.1.0* /usr/local/storm-1.1.0')
+            Execute('chown -R storm:storm /usr/local/storm-1.1.0')
+            Execute('ln -s /usr/local/storm-1.1.0 /usr/local/storm')
             Execute('ln -s /usr/local/storm/bin/storm /usr/local/bin/storm')
         storm_log_dir = os.path.isdir('/var/log/storm')
         if not storm_log_dir:

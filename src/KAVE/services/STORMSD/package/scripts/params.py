@@ -63,6 +63,7 @@ logviewer_port = kc.default('configurations/stormsd/stormsd.logviewer.port', '80
 childlogdir = kc.default('configurations/stormsd/childlogdir', '/var/log/supervisord/child', kc.is_valid_directory)
 supervisor_logfile = kc.default('configurations/stormsd/supervisor_logfile',
                                 '/var/log/supervisord.log', kc.is_valid_directory)
+storm_local_dir = kc.default('configurations/stormsd/storm.local.dir', 'storm-local', kc.is_valid_directory)
 storm_yaml_config = default('configurations/stormsd/stormsd.yaml.config', """#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -84,7 +85,8 @@ storm_yaml_config = default('configurations/stormsd/stormsd.yaml.config', """#
 ########### These all have default values as shown
 ########### Additional configuration goes into storm.yaml
 
-storm.local.dir: "storm-local"
+storm.local.dir: "{{storm_local_dir}}"
+storm.log.dir: "/var/log/storm"
 storm.zookeeper.servers:
  {% for server in storm_zookeeper_servers %}
   - "{{server}}"
@@ -120,7 +122,9 @@ storm_cluster_config = default('configurations/stormsd/storm_cluster_config',
  The ASF licenses this file to You under the Apache License, Version 2.0
  (the "License"); you may not use this file except in compliance with
  the License.  You may obtain a copy of the License at
+
      http://www.apache.org/licenses/LICENSE-2.0
+
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -128,14 +132,14 @@ storm_cluster_config = default('configurations/stormsd/storm_cluster_config',
  limitations under the License.
 -->
 
-<configuration monitorInterval="60">
+<configuration monitorInterval="60" shutdownHook="disable">
 <properties>
-    <property name="pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} %c{1.} [%p] %msg%n</property>
+    <property name="pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} %c{1.} %t [%p] %msg%n</property>
 </properties>
 <appenders>
-    <RollingFile name="A1"
+    <RollingFile name="A1" immediateFlush="false"
                  fileName="${sys:storm.log.dir}/${sys:logfile.name}"
-                 filePattern="${sys:storm.log.dir}/${sys:logfile.name}.%i">
+                 filePattern="${sys:storm.log.dir}/${sys:logfile.name}.%i.gz">
         <PatternLayout>
             <pattern>${pattern}</pattern>
         </PatternLayout>
@@ -144,9 +148,9 @@ storm_cluster_config = default('configurations/stormsd/storm_cluster_config',
         </Policies>
         <DefaultRolloverStrategy max="9"/>
     </RollingFile>
-    <RollingFile name="ACCESS"
-                 fileName="${sys:storm.log.dir}/access.log"
-                 filePattern="${sys:storm.log.dir}/access.log.%i">
+    <RollingFile name="WEB-ACCESS" immediateFlush="false"
+                 fileName="${sys:storm.log.dir}/access-web-${sys:daemon.name}.log"
+                 filePattern="${sys:storm.log.dir}/access-web-${sys:daemon.name}.log.%i.gz">
         <PatternLayout>
             <pattern>${pattern}</pattern>
         </PatternLayout>
@@ -155,14 +159,45 @@ storm_cluster_config = default('configurations/stormsd/storm_cluster_config',
         </Policies>
         <DefaultRolloverStrategy max="9"/>
     </RollingFile>
-    <Syslog name="syslog" format="RFC5424" host="localhost" port="514"
+    <RollingFile name="THRIFT-ACCESS" immediateFlush="false"
+                 fileName="${sys:storm.log.dir}/access-${sys:logfile.name}"
+                 filePattern="${sys:storm.log.dir}/access-${sys:logfile.name}.%i.gz">
+    <PatternLayout>
+        <pattern>${pattern}</pattern>
+    </PatternLayout>
+        <Policies>
+            <SizeBasedTriggeringPolicy size="100 MB"/> <!-- Or every 100 MB -->
+        </Policies>
+        <DefaultRolloverStrategy max="9"/>
+    </RollingFile>
+    <RollingFile name="METRICS"
+                 fileName="${sys:storm.log.dir}/${sys:logfile.name}.metrics"
+                 filePattern="${sys:storm.log.dir}/${sys:logfile.name}.metrics.%i.gz">
+        <PatternLayout>
+            <pattern>${patternMetrics}</pattern>
+        </PatternLayout>
+        <Policies>
+            <SizeBasedTriggeringPolicy size="2 MB"/>
+        </Policies>
+        <DefaultRolloverStrategy max="9"/>
+    </RollingFile>
+    <Syslog name="syslog" format="RFC5424" charset="UTF-8" host="localhost" port="514"
             protocol="UDP" appName="[${sys:daemon.name}]" mdcId="mdc" includeMDC="true"
             facility="LOCAL5" enterpriseNumber="18060" newLine="true" exceptionPattern="%rEx{full}"
-            messageId="[${sys:user.name}:S0]" id="storm"/>
+            messageId="[${sys:user.name}:S0]" id="storm" immediateFlush="true" immediateFail="true"/>
 </appenders>
 <loggers>
-    <Logger name="backtype.storm.security.auth.authorizer" level="info">
-        <AppenderRef ref="ACCESS"/>
+
+    <Logger name="org.apache.storm.logging.filters.AccessLoggingFilter" level="info" additivity="false">
+        <AppenderRef ref="WEB-ACCESS"/>
+        <AppenderRef ref="syslog"/>
+    </Logger>
+    <Logger name="org.apache.storm.logging.ThriftAccessLogger" level="info" additivity="false">
+        <AppenderRef ref="THRIFT-ACCESS"/>
+        <AppenderRef ref="syslog"/>
+    </Logger>
+    <Logger name="org.apache.storm.metric.LoggingClusterMetricsConsumer" level="info" additivity="false">
+        <appender-ref ref="METRICS"/>
     </Logger>
     <root level="info"> <!-- We log everything -->
         <appender-ref ref="A1"/>
