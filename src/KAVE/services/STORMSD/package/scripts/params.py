@@ -102,6 +102,10 @@ ui.childopts: "{{ui_childopts}}"
 logviewer.port: {{logviewer_port}}
 logviewer.childopts: "{{logviewer_childopts}}"
 
+drpc.servers:
+ {% for server in drpc_servers %}
+  - "{{server}}"
+ {% endfor %}
 drpc.childopts: "{{drpc_childopts}}"
 
 worker.childopts: "{{worker_childopts}}"
